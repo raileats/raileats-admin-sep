@@ -1,4 +1,3 @@
-
 "use client";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,88 +13,107 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any|null>(null);
 
   const fetchOrders = async ()=>{
-    const res = await fetch(`/api/admin/orders?status=${status}`);
-    const j = await res.json();
-    setOrders(j);
+    try {
+      const res = await fetch(`/api/admin/orders?status=${status}`);
+      if (!res.ok) {
+        console.error("Failed to fetch orders", res.status);
+        return;
+      }
+      const data = await res.json();
+      setOrders(data || []);
+    } catch (err) {
+      console.error("Error fetching orders", err);
+    }
   };
 
-  useEffect(()=>{ fetchOrders(); }, [status]);
-
-  const updateStatus = async (id: string, newStatus: string) => {
-    const remarks = remarksById[id] || '';
-    await fetch('/api/admin/orders', { method: 'POST', body: JSON.stringify({ id, action: newStatus, remarks }) });
-    setRemarksById(prev=> ({...prev, [id]: ''}));
+  useEffect(()=>{
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const updateRemark = (orderId: string, remark: string) => {
+    setRemarksById(prev => ({ ...prev, [orderId]: remark }));
+  };
+
+  const saveRemark = async (orderId: string) => {
+    try {
+      const remark = remarksById[orderId] || "";
+      const res = await fetch(`/api/admin/orders/${orderId}/remark`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ remark }),
+      });
+      if (!res.ok) {
+        console.error("Failed to save remark", await res.text());
+      } else {
+        // optimistic - refetch or update UI as needed
+        fetchOrders();
+      }
+    } catch (err) {
+      console.error("Error saving remark", err);
+    }
   };
 
   return (
     <div className="flex min-h-screen">
-      <AdminSidebar active="orders" />
-
+      <AdminSidebar />
       <div className="flex-1 p-6">
-        <h1 className="text-xl font-bold mb-4 capitalize">
-          {status.replace("-", " ")} Orders
-        </h1>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Orders - {status}</h1>
+          <div>
+            <button
+              onClick={() => fetchOrders()}
+              className="px-3 py-1 rounded bg-blue-600 text-white"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
 
-        <div className="overflow-x-auto bg-white rounded shadow">
-          <table className="w-full text-sm border-collapse">
-            <thead className="bg-gray-100 text-left">
+        <div className="bg-white rounded shadow overflow-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="p-2 border">Order Id</th>
-                <th className="p-2 border">Delivery Date</th>
-                <th className="p-2 border">Delivery Time</th>
-                <th className="p-2 border">Train No</th>
-                <th className="p-2 border">Seat/Coach</th>
-                <th className="p-2 border">Passenger</th>
-                <th className="p-2 border">Mobile</th>
-                <th className="p-2 border">PNR</th>
-                <th className="p-2 border">Outlet Id</th>
-                <th className="p-2 border">Outlet Name</th>
-                <th className="p-2 border">Station</th>
-                <th className="p-2 border">Type</th>
-                <th className="p-2 border">Amount</th>
-                <th className="p-2 border">History</th>
-                <th className="p-2 border">Action</th>
+                <th className="p-3">Order ID</th>
+                <th className="p-3">Customer</th>
+                <th className="p-3">Items</th>
+                <th className="p-3">Total</th>
+                <th className="p-3">Actions</th>
+                <th className="p-3">Remark</th>
               </tr>
             </thead>
             <tbody>
-              {orders.map((o) => (
-                <tr key={o.id} className="hover:bg-gray-50">
-                  <td className="p-2 border">{o.id}</td>
-                  <td className="p-2 border">{o.date}</td>
-                  <td className="p-2 border">{o.time}</td>
-                  <td className="p-2 border">{o.train}</td>
-                  <td className="p-2 border">{o.coach} / {o.seat}</td>
-                  <td className="p-2 border">{o.passenger}</td>
-                  <td className="p-2 border">{o.mobile}</td>
-                  <td className="p-2 border">{o.pnr || "—"}</td>
-                  <td className="p-2 border">{o.outletId}</td>
-                  <td className="p-2 border">{o.outletName}</td>
-                  <td className="p-2 border">{o.station}</td>
-                  <td className="p-2 border">{o.type || o.mode}</td>
-                  <td className="p-2 border">₹{o.amount}</td>
-                  <td className="p-2 border">
-                    <button onClick={()=> alert(JSON.stringify(o.history || [], null, 2))} className="text-blue-600 hover:underline">History</button>
+              {orders.map((o: any) => (
+                <tr key={o.id} className="border-t">
+                  <td className="p-3">{o.id}</td>
+                  <td className="p-3">
+                    <div className="font-medium">{o.customer?.name}</div>
+                    <div className="text-sm text-gray-500">{o.customer?.phone}</div>
                   </td>
-                  <td className="p-2 border">
-                    <button onClick={()=> setSelectedOrder(o)} className="text-sm text-blue-600 mr-2">View</button>
-                    <select
-                      onChange={(e) => updateStatus(o.id, e.target.value)}
-                      defaultValue=""
-                      className="border rounded px-2 py-1 text-sm"
+                  <td className="p-3">
+                    <div className="text-sm text-gray-700">{(o.items || []).length} items</div>
+                  </td>
+                  <td className="p-3">₹{o.total}</td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => setSelectedOrder(o)}
+                      className="px-3 py-1 rounded border hover:bg-gray-100"
                     >
-                      <option value="" disabled>Move to...</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="not_delivered">Not Delivered</option>
-                    </select>
+                      View
+                    </button>
+                  </td>
+                  <td className="p-3">
                     <input
-                      type="text"
-                      placeholder="Remarks"
                       value={remarksById[o.id] || ""}
-                      onChange={(e) => setRemarksById(prev=>({ ...prev, [o.id]: e.target.value }))}
+                      onChange={(e) => updateRemark(o.id, e.target.value)}
                       className="ml-2 border rounded px-2 py-1 text-sm"
                     />
+                    <button
+                      onClick={() => saveRemark(o.id)}
+                      className="ml-2 px-2 py-1 rounded bg-green-600 text-white text-sm"
+                    >
+                      Save
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -104,7 +122,14 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {selectedOrder && <OrderDetailsModal order={selectedOrder} onClose={()=> setSelectedOrder(null)} />}
+      {/* ===== IMPORTANT FIX: pass `open` prop to modal ===== */}
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          open={!!selectedOrder}                 // <-- ADDED: satisfies required prop
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
     </div>
   );
 }
