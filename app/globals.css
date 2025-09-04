@@ -1,0 +1,27 @@
+/* app/globals.css - Tailwind + small helpers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Small convenience styles */
+:root {
+  --bg: #f8fafc;
+  --muted: #6b7280;
+  --accent: #f59e0b;
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* small utility to constrain content */
+.container {
+  @apply max-w-6xl mx-auto px-4;
+}
