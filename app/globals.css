@@ -28,4 +28,14 @@ h1 { font-size:40px; color:#111827; margin-bottom:12px; }
 .links-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
 .btn { display:inline-block; padding:8px 14px; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px; }
 .btn-primary { background:#2563eb; color:white; }
-.btn-ghost { border:1px solid #d1d5db; color:#111827; backgrou
+.btn-ghost { border:1px solid #d1d5db; color:#111827; background:white; }
+.btn-api { border:1px solid #d1d5db; color:#111827; background:white; font-size:13px; padding:6px 10px; }
+
+/* Footer small */
+.footer-note { color:#6b7280; margin-top:12px; font-size:13px; }
+
+/* Small responsive */
+@media (max-width:700px){
+  .header-inner { padding:10px; flex-direction:column; align-items:flex-start; gap:8px; }
+  .container { padding:12px; }
+}
