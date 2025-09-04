@@ -1,8 +1,6 @@
-/* app/globals.css - Tailwind + small helpers */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 /* Small convenience styles */
 :root {
   --bg: #f8fafc;
