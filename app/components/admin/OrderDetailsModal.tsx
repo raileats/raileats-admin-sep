@@ -10,7 +10,7 @@ type OrderItem = {
 };
 
 type Customer = {
-  name: string;
+  name?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -18,38 +18,53 @@ type Customer = {
 
 export type Order = {
   id: string;
-  status: string;
-  total: number;
+  status?: string;
+  total?: number;
   createdAt?: string;
-  items: OrderItem[];
+  items?: OrderItem[];
   customer?: Customer;
   notes?: string;
 };
 
 type Props = {
-  orderId: string | null;
+  // parent can pass whole order OR only orderId
+  order?: Order | null;
+  orderId?: string | null;
   open: boolean;
   onClose: () => void;
 };
 
-export default function OrderDetailsModal({ orderId, open, onClose }: Props) {
+export default function OrderDetailsModal({ order: orderProp = null, orderId = null, open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<Order | null>(orderProp);
   const [error, setError] = useState<string | null>(null);
 
+  // If parent passed a full order object, use it.
+  // If not, and orderId is provided, fetch from API.
   useEffect(() => {
-    if (!open || !orderId) return;
-    let cancelled = false;
+    // sync prop -> state when parent updates the object
+    if (orderProp) {
+      setOrder(orderProp);
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
+    if (!open || !orderId) {
+      // if modal closed or no id, clear fetched state (but keep orderProp if provided)
+      if (!orderProp) setOrder(null);
+      return;
+    }
+
+    let cancelled = false;
     async function fetchOrder() {
       setLoading(true);
       setError(null);
       try {
-        // adjust endpoint as per your API
         const res = await fetch(`/api/admin/orders/${orderId}`);
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(`Failed to fetch order: ${res.status} ${text}`);
+          throw new Error(`Failed (${res.status}) ${text}`);
         }
         const data: Order = await res.json();
         if (!cancelled) setOrder(data);
@@ -64,32 +79,20 @@ export default function OrderDetailsModal({ orderId, open, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, orderId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderProp, orderId, open]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* modal */}
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
       <div className="relative z-10 max-w-3xl w-full mx-4 bg-white rounded-lg shadow-lg overflow-auto max-h-[80vh]">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="text-lg font-semibold">
             Order Details {order?.id ? `#${order.id}` : ""}
           </h3>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="px-3 py-1 rounded hover:bg-gray-100"
-          >
-            ✕
-          </button>
+          <button onClick={onClose} aria-label="Close" className="px-3 py-1 rounded hover:bg-gray-100">✕</button>
         </div>
 
         <div className="p-4">
@@ -101,9 +104,7 @@ export default function OrderDetailsModal({ orderId, open, onClose }: Props) {
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded">
-              Error: {error}
-            </div>
+            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded">Error: {error}</div>
           )}
 
           {!loading && !error && order && (
@@ -115,20 +116,19 @@ export default function OrderDetailsModal({ orderId, open, onClose }: Props) {
                   <p className="text-sm">{order.customer?.phone}</p>
                   <p className="text-sm">{order.customer?.email}</p>
                 </div>
+
                 <div>
                   <p className="text-sm text-gray-500">Order Info</p>
-                  <p className="font-medium">Status: {order.status}</p>
-                  <p className="text-sm">Total: ₹{order.total}</p>
-                  <p className="text-sm">
-                    Date: {order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}
-                  </p>
+                  <p className="font-medium">Status: {order.status || "-"}</p>
+                  <p className="text-sm">Total: ₹{order.total ?? "-"}</p>
+                  <p className="text-sm">Date: {order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}</p>
                 </div>
               </div>
 
               <div className="mb-4">
                 <p className="text-sm text-gray-500">Items</p>
                 <div className="mt-2 divide-y">
-                  {order.items.map((it) => (
+                  {(order.items ?? []).map((it) => (
                     <div key={it.id} className="py-2 flex justify-between items-center">
                       <div>
                         <div className="font-medium">{it.name}</div>
@@ -148,22 +148,8 @@ export default function OrderDetailsModal({ orderId, open, onClose }: Props) {
               )}
 
               <div className="flex justify-end gap-2">
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 rounded border hover:bg-gray-50"
-                >
-                  Close
-                </button>
-                {/* Example: Admin action */}
-                <button
-                  onClick={() => {
-                    // example action: mark as delivered - implement API call as needed
-                    alert("Implement admin action here");
-                  }}
-                  className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-                >
-                  Mark Delivered
-                </button>
+                <button onClick={onClose} className="px-4 py-2 rounded border hover:bg-gray-50">Close</button>
+                <button onClick={() => alert("Implement admin action")} className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Mark Delivered</button>
               </div>
             </>
           )}
