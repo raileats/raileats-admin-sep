@@ -1,162 +1,72 @@
 "use client";
+import React, { useRef } from "react";
 
-import React, { useEffect, useState } from "react";
+export default function OrderDetailsModal({ order, onClose } : { order:any, onClose: ()=>void }) {
+  const printRef = useRef<HTMLDivElement|null>(null);
 
-type OrderItem = {
-  id: string;
-  name: string;
-  qty: number;
-  price: number;
-};
+  if(!order) return null;
 
-type Customer = {
-  name?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-};
+  const gstPercent = 5;
+  const subtotal = order.items ? order.items.reduce((s:any,it:any)=> s + (it.price * it.qty), 0) : (order.amount || 0);
+  const gst = +(subtotal * gstPercent / 100).toFixed(2);
+  const total = +(subtotal + gst);
 
-export type Order = {
-  id: string;
-  status?: string;
-  total?: number;
-  createdAt?: string;
-  items?: OrderItem[];
-  customer?: Customer;
-  notes?: string;
-};
-
-type Props = {
-  // parent can pass whole order OR only orderId
-  order?: Order | null;
-  orderId?: string | null;
-  open: boolean;
-  onClose: () => void;
-};
-
-export default function OrderDetailsModal({ order: orderProp = null, orderId = null, open, onClose }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<Order | null>(orderProp);
-  const [error, setError] = useState<string | null>(null);
-
-  // If parent passed a full order object, use it.
-  // If not, and orderId is provided, fetch from API.
-  useEffect(() => {
-    // sync prop -> state when parent updates the object
-    if (orderProp) {
-      setOrder(orderProp);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    if (!open || !orderId) {
-      // if modal closed or no id, clear fetched state (but keep orderProp if provided)
-      if (!orderProp) setOrder(null);
-      return;
-    }
-
-    let cancelled = false;
-    async function fetchOrder() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/admin/orders/${orderId}`);
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Failed (${res.status}) ${text}`);
-        }
-        const data: Order = await res.json();
-        if (!cancelled) setOrder(data);
-      } catch (err: any) {
-        if (!cancelled) setError(err.message || "Unknown error");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    fetchOrder();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderProp, orderId, open]);
-
-  if (!open) return null;
+  const handlePrint = () => {
+    const printContents = printRef.current?.innerHTML;
+    if (!printContents) return;
+    const w = window.open("", "_blank", "width=800,height=600");
+    if (!w) return;
+    w.document.open();
+    w.document.write(`<html><head><title>Order ${order.id}</title></head><body>${printContents}</body></html>`);
+    w.document.close();
+    w.print();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
-      <div className="relative z-10 max-w-3xl w-full mx-4 bg-white rounded-lg shadow-lg overflow-auto max-h-[80vh]">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">
-            Order Details {order?.id ? `#${order.id}` : ""}
-          </h3>
-          <button onClick={onClose} aria-label="Close" className="px-3 py-1 rounded hover:bg-gray-100">✕</button>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl bg-white rounded shadow p-4 overflow-auto" role="dialog" aria-modal="true">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="RailEats" className="h-12 w-12 rounded-full" />
+            <div>
+              <h3 className="text-lg font-bold">Order Summary</h3>
+              <div className="text-sm text-gray-600">Order ID: <strong>{order.id}</strong></div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handlePrint} className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Print</button>
+            <button onClick={onClose} className="px-2 py-1 rounded hover:bg-gray-100">Close</button>
+          </div>
         </div>
 
-        <div className="p-4">
-          {loading && (
-            <div className="py-8 text-center">
-              <div className="inline-block animate-spin w-8 h-8 border-2 border-gray-300 border-t-gray-700 rounded-full" />
-              <div className="mt-2 text-sm">Loading order...</div>
+        <div ref={printRef} className="mt-4">
+          <div className="mb-3">
+            <div className="text-sm text-gray-500">Customer</div>
+            <div className="font-medium">{order.customer?.name || "-"}</div>
+            <div className="text-sm">{order.customer?.phone}</div>
+            <div className="text-sm">{order.customer?.email}</div>
+          </div>
+
+          <div className="mb-3">
+            <div className="text-sm text-gray-500">Items</div>
+            <div className="mt-2 divide-y">
+              {order.items?.map((it:any) => (
+                <div key={it.id} className="py-2 flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">{it.name}</div>
+                    <div className="text-sm text-gray-500">Qty: {it.qty}</div>
+                  </div>
+                  <div className="font-medium">₹{(it.price * it.qty).toFixed(2)}</div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded">Error: {error}</div>
-          )}
-
-          {!loading && !error && order && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-gray-500">Customer</p>
-                  <p className="font-medium">{order.customer?.name || "-"}</p>
-                  <p className="text-sm">{order.customer?.phone}</p>
-                  <p className="text-sm">{order.customer?.email}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500">Order Info</p>
-                  <p className="font-medium">Status: {order.status || "-"}</p>
-                  <p className="text-sm">Total: ₹{order.total ?? "-"}</p>
-                  <p className="text-sm">Date: {order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}</p>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <p className="text-sm text-gray-500">Items</p>
-                <div className="mt-2 divide-y">
-                  {(order.items ?? []).map((it) => (
-                    <div key={it.id} className="py-2 flex justify-between items-center">
-                      <div>
-                        <div className="font-medium">{it.name}</div>
-                        <div className="text-sm text-gray-500">Qty: {it.qty}</div>
-                      </div>
-                      <div className="font-medium">₹{(it.price * it.qty).toFixed(2)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {order.notes && (
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500">Notes</p>
-                  <div className="mt-1 p-2 bg-gray-50 rounded text-sm">{order.notes}</div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2">
-                <button onClick={onClose} className="px-4 py-2 rounded border hover:bg-gray-50">Close</button>
-                <button onClick={() => alert("Implement admin action")} className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Mark Delivered</button>
-              </div>
-            </>
-          )}
-
-          {!loading && !error && !order && (
-            <div className="text-center py-8 text-sm text-gray-500">No data</div>
-          )}
+          <div className="border-t pt-3">
+            <div className="flex justify-between text-sm"><div>Subtotal</div><div>₹{subtotal.toFixed(2)}</div></div>
+            <div className="flex justify-between text-sm"><div>GST ({gstPercent}%)</div><div>₹{gst.toFixed(2)}</div></div>
+            <div className="flex justify-between font-semibold"><div>Total</div><div>₹{total.toFixed(2)}</div></div>
+          </div>
         </div>
       </div>
     </div>
