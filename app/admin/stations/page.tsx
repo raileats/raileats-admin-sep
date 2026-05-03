@@ -44,8 +44,8 @@ export default async function StationsPage() {
         >
           <h3 style={{ marginTop: 0 }}>Add New Station</h3>
 
-          {/* ✅ FIXED */}
-          <AddStationForm onAdded={() => {}} />
+          {/* ✅ FIXED (NO onAdded) */}
+          <AddStationForm />
         </div>
 
         <div
@@ -58,7 +58,6 @@ export default async function StationsPage() {
         >
           <h3 style={{ marginTop: 0 }}>Stations List</h3>
 
-          {/* ✅ FIXED */}
           <StationList initial={stations} />
         </div>
       </div>
