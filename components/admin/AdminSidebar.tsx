@@ -54,6 +54,27 @@ export default function AdminSidebar({ active }: Props) {
             </ul>
           </li>
 
+          {/* ✅ ONLY THIS PART ADDED */}
+          <li className="mt-4">
+            <ul className="pl-3">
+              <li>
+                <Link href="/admin/bulk" className={itemClasses("bulk", active)}>
+                  Bulk Orders
+                </Link>
+              </li>
+              <li>
+                <Link href="/admin/customers" className={itemClasses("customers", active)}>
+                  Customers
+                </Link>
+              </li>
+              <li>
+                <Link href="/admin/feedback" className={itemClasses("feedback", active)}>
+                  Feedback
+                </Link>
+              </li>
+            </ul>
+          </li>
+
           <li className="mt-6">
             <Link href="/admin/logout" className="block px-3 py-2 rounded hover:bg-gray-50 text-red-600">
               Logout
