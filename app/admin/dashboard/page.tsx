@@ -1,7 +1,6 @@
-
 "use client";
 import React from "react";
-import AdminSidebar from "@/app/components/admin/AdminSidebar";
+import AdminSidebar from "@/components/admin/AdminSidebar"; // ✅ FIXED PATH
 
 function TopBar() {
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("raileats_admin")||"null") : null;
