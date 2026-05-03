@@ -23,6 +23,23 @@ export default function AdminSidebar({ active }: Props) {
         <Link href="/admin/outlets" className={active === "outlets" ? "active" : ""}>Outlets List</Link>
       </div>
 
+      {/* ✅ NEW SECTION ADDED */}
+      <div style={{ marginTop: 12 }}>
+        <div className="section-title">Management</div>
+
+        <Link href="/admin/bulk" className={active === "bulk" ? "active" : ""}>
+          Bulk Orders
+        </Link>
+
+        <Link href="/admin/customers" className={active === "customers" ? "active" : ""}>
+          Customers
+        </Link>
+
+        <Link href="/admin/feedback" className={active === "feedback" ? "active" : ""}>
+          Feedback
+        </Link>
+      </div>
+
       <div style={{ marginTop: 16 }}>
         <Link href="/admin/logout" style={{ color: "#ef4444" }}>Logout</Link>
       </div>
