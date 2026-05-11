@@ -8,7 +8,11 @@ type Props = {
 
 function itemClasses(activeName?: string, active?: string) {
   const base = "block px-3 py-2 rounded";
-  const activeCls = activeName && active === activeName ? " bg-yellow-50 font-semibold" : " hover:bg-gray-50";
+  const activeCls =
+    activeName && active === activeName
+      ? " bg-yellow-50 font-semibold"
+      : " hover:bg-gray-50";
+
   return base + activeCls;
 }
 
@@ -21,22 +25,34 @@ export default function AdminSidebar({ active }: Props) {
 
       <nav className="p-3">
         <ul className="space-y-1 text-sm">
+
           <li>
-            <Link href="/admin/dashboard" className={itemClasses("dashboard", active)}>
+            <Link
+              href="/admin/dashboard"
+              className={itemClasses("dashboard", active)}
+            >
               Dashboard
             </Link>
           </li>
 
           <li className="mt-3">
             <div className="text-xs text-gray-400 px-3">Orders</div>
+
             <ul className="pl-3">
               <li>
-                <Link href="/admin/orders" className={itemClasses("orders", active)}>
+                <Link
+                  href="/admin/orders"
+                  className={itemClasses("orders", active)}
+                >
                   Orders List
                 </Link>
               </li>
+
               <li>
-                <Link href="/admin/orders?status=booked" className={itemClasses("orders-booked", active)}>
+                <Link
+                  href="/admin/orders?status=booked"
+                  className={itemClasses("orders-booked", active)}
+                >
                   Booked
                 </Link>
               </li>
@@ -44,31 +60,52 @@ export default function AdminSidebar({ active }: Props) {
           </li>
 
           <li className="mt-4">
-            <div className="text-xs text-gray-400 px-3">Outlet Master</div>
+            <div className="text-xs text-gray-400 px-3">
+              Outlet Master
+            </div>
+
             <ul className="pl-3">
               <li>
-                <Link href="/admin/outlets" className={itemClasses("outlets", active)}>
+                <Link
+                  href="/admin/outlets"
+                  className={itemClasses("outlets", active)}
+                >
                   Outlets List
                 </Link>
               </li>
             </ul>
           </li>
 
-          {/* ✅ ONLY THIS PART ADDED */}
+          {/* ✅ ONLY NEW LINKS ADDED */}
           <li className="mt-4">
+            <div className="text-xs text-gray-400 px-3">
+              Management
+            </div>
+
             <ul className="pl-3">
               <li>
-                <Link href="/admin/bulk" className={itemClasses("bulk", active)}>
+                <Link
+                  href="/admin/bulk"
+                  className={itemClasses("bulk", active)}
+                >
                   Bulk Orders
                 </Link>
               </li>
+
               <li>
-                <Link href="/admin/customers" className={itemClasses("customers", active)}>
+                <Link
+                  href="/admin/customers"
+                  className={itemClasses("customers", active)}
+                >
                   Customers
                 </Link>
               </li>
+
               <li>
-                <Link href="/admin/feedback" className={itemClasses("feedback", active)}>
+                <Link
+                  href="/admin/feedback"
+                  className={itemClasses("feedback", active)}
+                >
                   Feedback
                 </Link>
               </li>
@@ -76,10 +113,14 @@ export default function AdminSidebar({ active }: Props) {
           </li>
 
           <li className="mt-6">
-            <Link href="/admin/logout" className="block px-3 py-2 rounded hover:bg-gray-50 text-red-600">
+            <Link
+              href="/admin/logout"
+              className="block px-3 py-2 rounded hover:bg-gray-50 text-red-600"
+            >
               Logout
             </Link>
           </li>
+
         </ul>
       </nav>
     </aside>
