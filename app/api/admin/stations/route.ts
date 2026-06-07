@@ -1,5 +1,6 @@
 // app/api/admin/stations/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 type Station = {
   id: string;
@@ -12,9 +13,34 @@ type Station = {
 };
 
 let STATIONS: Station[] = [
-  { id: "st-1", code: "ST001", name: "Central Station", state: "Maharashtra", category: "Major", owner: "RailEats", mobile: "9999999999" },
-  { id: "st-2", code: "ST002", name: "North Junction", state: "Karnataka", category: "Minor", owner: "Vendor A", mobile: "" },
+  {
+    id: "st-1",
+    code: "ST001",
+    name: "Central Station",
+    state: "Maharashtra",
+    category: "Major",
+    owner: "RailEats",
+    mobile: "9999999999",
+  },
+  {
+    id: "st-2",
+    code: "ST002",
+    name: "North Junction",
+    state: "Karnataka",
+    category: "Minor",
+    owner: "Vendor A",
+    mobile: "",
+  },
 ];
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "";
+
+const supabase =
+  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // helper json
 function jsonResponse(data: any, status = 200) {
@@ -26,19 +52,67 @@ export async function GET(req: NextRequest) {
   const id = url.searchParams.get("id") || undefined;
   const code = url.searchParams.get("code") || undefined;
   const category = url.searchParams.get("category") || undefined;
-  const q = url.searchParams.get("q") || undefined; // generic search (name etc.)
+  const q = url.searchParams.get("q") || undefined;
+
+  try {
+    if (supabase) {
+      let query = supabase
+        .from("stations")
+        .select("*")
+        .order("StationId", { ascending: true })
+        .range(0, 9999);
+
+      if (id) query = query.eq("StationId", Number(id));
+      if (code) query = query.ilike("StationCode", code);
+
+      if (category) {
+        query = query.ilike("Category", category);
+      }
+
+      if (q) {
+        query = query.or(
+          `StationName.ilike.%${q}%,StationCode.ilike.%${q}%,State.ilike.%${q}%,District.ilike.%${q}%`
+        );
+      }
+
+      const { data, error } = await query;
+
+      if (!error) {
+        return jsonResponse({ data: data || [] });
+      }
+    }
+  } catch (err) {
+    // fallback old local data below
+  }
 
   let out = STATIONS.slice();
 
   if (id) out = out.filter((s) => s.id === id);
-  if (code) out = out.filter((s) => (s.code || "").toLowerCase() === code.toLowerCase());
-  if (category) out = out.filter((s) => (s.category || "").toLowerCase() === category.toLowerCase());
+  if (code)
+    out = out.filter(
+      (s) => (s.code || "").toLowerCase() === code.toLowerCase()
+    );
+  if (category)
+    out = out.filter(
+      (s) => (s.category || "").toLowerCase() === category.toLowerCase()
+    );
   if (q) {
     const ql = q.toLowerCase();
-    out = out.filter((s) => ((s.name || "") + " " + (s.code || "") + " " + (s.state || "") + " " + (s.category || "")).toLowerCase().includes(ql));
+    out = out.filter((s) =>
+      (
+        (s.name || "") +
+        " " +
+        (s.code || "") +
+        " " +
+        (s.state || "") +
+        " " +
+        (s.category || "")
+      )
+        .toLowerCase()
+        .includes(ql)
+    );
   }
 
-  // optional sort by name alphabetically if requested
   const sort = url.searchParams.get("sort");
   if (sort === "name") out = out.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -57,7 +131,9 @@ export async function POST(req: NextRequest) {
         const name = (item.name || "").toString().trim();
         const state = (item.state || "").toString().trim();
         if (!name || !state) continue;
-        const id = (item.id && item.id.toString().trim()) || "st-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+        const id =
+          (item.id && item.id.toString().trim()) ||
+          "st-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
         const newStation: Station = {
           id,
           name,
@@ -79,7 +155,15 @@ export async function POST(req: NextRequest) {
       return jsonResponse({ error: "name and state are required" }, 400);
     }
     const id = providedId || "st-" + Date.now();
-    const newStation: Station = { id, name, state, category: category || "", code: code || "", owner: owner || "", mobile: mobile || "" };
+    const newStation: Station = {
+      id,
+      name,
+      state,
+      category: category || "",
+      code: code || "",
+      owner: owner || "",
+      mobile: mobile || "",
+    };
     STATIONS.unshift(newStation);
     return jsonResponse({ data: newStation }, 201);
   } catch (err: any) {
