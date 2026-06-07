@@ -1,6 +1,5 @@
 // app/api/admin/stations/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 type Station = {
   id: string;
@@ -33,18 +32,71 @@ let STATIONS: Station[] = [
   },
 ];
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "";
-
-const supabase =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
 // helper json
 function jsonResponse(data: any, status = 200) {
   return NextResponse.json(data, { status });
+}
+
+function escapeSupabaseFilterValue(value: string) {
+  return value.replace(/"/g, '\\"').replace(/,/g, "\\,");
+}
+
+async function fetchStationsFromSupabase(params: {
+  id?: string;
+  code?: string;
+  category?: string;
+  q?: string;
+  sort?: string | null;
+}) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) return null;
+
+  const url = new URL(`${supabaseUrl}/rest/v1/stations`);
+
+  url.searchParams.set("select", "*");
+  url.searchParams.set("limit", "10000");
+
+  if (params.sort === "name") {
+    url.searchParams.set("order", "StationName.asc");
+  } else {
+    url.searchParams.set("order", "StationId.asc");
+  }
+
+  if (params.id) {
+    url.searchParams.set("StationId", `eq.${params.id}`);
+  }
+
+  if (params.code) {
+    url.searchParams.set("StationCode", `ilike.${params.code}`);
+  }
+
+  if (params.category) {
+    url.searchParams.set("Category", `ilike.${params.category}`);
+  }
+
+  if (params.q) {
+    const q = escapeSupabaseFilterValue(params.q);
+    url.searchParams.set(
+      "or",
+      `(StationName.ilike.*${q}*,StationCode.ilike.*${q}*,State.ilike.*${q}*,District.ilike.*${q}*)`
+    );
+  }
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+
+  return await res.json();
 }
 
 export async function GET(req: NextRequest) {
@@ -52,34 +104,20 @@ export async function GET(req: NextRequest) {
   const id = url.searchParams.get("id") || undefined;
   const code = url.searchParams.get("code") || undefined;
   const category = url.searchParams.get("category") || undefined;
-  const q = url.searchParams.get("q") || undefined;
+  const q = url.searchParams.get("q") || undefined; // generic search (name etc.)
+  const sort = url.searchParams.get("sort");
 
   try {
-    if (supabase) {
-      let query = supabase
-        .from("stations")
-        .select("*")
-        .order("StationId", { ascending: true })
-        .range(0, 9999);
+    const supabaseData = await fetchStationsFromSupabase({
+      id,
+      code,
+      category,
+      q,
+      sort,
+    });
 
-      if (id) query = query.eq("StationId", Number(id));
-      if (code) query = query.ilike("StationCode", code);
-
-      if (category) {
-        query = query.ilike("Category", category);
-      }
-
-      if (q) {
-        query = query.or(
-          `StationName.ilike.%${q}%,StationCode.ilike.%${q}%,State.ilike.%${q}%,District.ilike.%${q}%`
-        );
-      }
-
-      const { data, error } = await query;
-
-      if (!error) {
-        return jsonResponse({ data: data || [] });
-      }
+    if (Array.isArray(supabaseData)) {
+      return jsonResponse({ data: supabaseData });
     }
   } catch (err) {
     // fallback old local data below
@@ -113,7 +151,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const sort = url.searchParams.get("sort");
+  // optional sort by name alphabetically if requested
   if (sort === "name") out = out.sort((a, b) => a.name.localeCompare(b.name));
 
   return jsonResponse({ data: out });
